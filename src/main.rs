@@ -1,6 +1,6 @@
 use std::fs;
 
-use kin::{date::Date, error::Error};
+use tribe::{date::Date, error::Error};
 use yaml_rust::YamlLoader;
 
 #[derive(Debug, PartialEq)]
