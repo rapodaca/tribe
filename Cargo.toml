@@ -2,7 +2,11 @@
 name = "kin"
 version = "0.1.0"
 edition = "2021"
+repository = "https://github.com/rapodaca/kin"
+description = "A command line utility for compiling family histories from flat-file sources."
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+chrono = "0.4.31"
+yaml-rust = "0.4"

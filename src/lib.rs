@@ -1,166 +1,96 @@
-use std::collections::{BTreeMap, BTreeSet};
+pub mod date;
+pub mod error;
 
-#[derive(Default, Debug, PartialEq)]
-pub struct Artifact {}
+pub use date::Date;
+pub use error::Error;
+// #[derive(Debug, PartialEq)]
+// pub struct Persona {
 
-impl Artifact {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
+// }
 
-#[derive(Debug, PartialEq)]
-pub struct Abstract {
-    artifact: Artifact,
-    claims: BTreeMap<Persona, BTreeSet<Claim>>,
-}
+// #[derive(Debug, PartialEq)]
+// pub struct Url {
 
-impl Abstract {
-    pub fn new(artifact: Artifact) -> Self {
-        Self {
-            artifact,
-            claims: BTreeMap::new(),
-        }
-    }
-    pub fn add_claim(&mut self, persona: Persona, claim: Claim) {
-        // e.g., marriage creates bi-directional claims
-    }
+// }
 
-    pub fn merge(&mut self, other: Abstract) -> Self {
-        todo!()
-    }
-}
+// #[derive(Debug, PartialEq)]
+// pub enum Date {
+//     Day, // e.g., Jan. 1, 1970
+//     Month,  // e.g., Jan. 1970
+//     Year,  // e.g., 1970
+// }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum Gender {
-    Male,
-    Female,
-}
+// #[derive(Debug, PartialEq)]
+// pub enum Time {
+//     On(Date),
+//     About(Date),
+//     Before(Date),
+//     After(Date),
+//     Between(Date, Date),
+// }
 
-#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone)]
-pub enum Honorific {
-    Mister,
-    Misus,
-}
+// #[derive(Debug, PartialEq)]
+// pub enum Place {
+//     // US Settlement e.g., San Francisco, San Francisco County, California
+//     // World Settlement e.g., Paris, France
+//     // US County, e.g., Marion County, Oregon
+//     // US State, e.g., Nevada
+//     // US Address (???, Rural Route)
+// }
 
-#[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone)]
-pub struct Name {
-    honorific: Option<Honorific>,
-    first: Option<String>,
-    middle: Option<String>,
-    last: Option<String>,
-}
+// #[derive(Debug, PartialEq)]
+// pub struct Birth {
+//     persona: Persona,
+//     mother: Option<Persona>,
+//     time: Option<Time>,
+//     place: Option<Place>,
+// }
 
-impl Name {
-    pub fn first_last(first: &str, last: &str) -> Self {
-        Self {
-            honorific: None,
-            first: Some(first.into()),
-            middle: None,
-            last: Some(last.into()),
-        }
-    }
+// #[derive(Debug, PartialEq)]
+// pub struct Abstract {
+//     births: Vec<Birth>,
+// }
 
-    pub fn misus_first_last(first: &str, last: &str) -> Self {
-        Self {
-            honorific: Some(Honorific::Misus),
-            ..Name::first_last(first, last)
-        }
-    }
-}
+// #[derive(Debug, PartialEq)]
+// pub enum Repository {
+//     DatabaseWithImages {
+//         name: String,
+//         url: Url,
+//         custodian: String,
+//     },
+//     Database {
+//         name: String,
+//         url: String,
+//     },
+//     Book {
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
-pub struct Persona {
-    pub name: Option<Name>,
-    pub gender: Option<Gender>,
-}
+//     },
+//     RareBook {
+//       // Collection
+//     },
+// }
 
-impl Persona {
-    pub fn new(name: Name) -> Self {
-        Self {
-            name: Some(name),
-            gender: None,
-        }
-    }
-}
+// #[derive(Debug, PartialEq)]
+// pub struct Citation {
+//     date: String,
+//     title: Option<String>,
+//     subtitle: String,
+//     author: String,
+//     repository: Option<Repository>,
+// }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub struct Marriage {
-    spouse: Persona,
-}
+// #[derive(Debug, PartialEq)]
+// pub enum Artifact {
+//     Jpeg(Vec<u8>),
+//     Png(Vec<u8>),
+//     Pdf(Vec<u8>),
+//     Markdown(String),
+//     Text(String)
+// }
 
-impl Marriage {
-    pub fn new(spouse: Persona) -> Self {
-        Self { spouse }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub struct Time {}
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub enum Place {}
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub struct Residence {
-    place: Place,
-    time: Option<Time>,
-}
-
-#[derive(Default, Debug, PartialEq, Eq, Hash)]
-pub struct Death {
-    place: Option<Place>,
-    time: Option<Time>,
-}
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub struct Burial {
-    place: Option<Place>,
-    time: Option<Time>,
-}
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub struct Birth {
-    time: Option<Time>,
-    place: Option<Place>,
-    mother: Option<Persona>,
-}
-
-#[derive(Debug, PartialEq, Eq, Hash)]
-pub enum Claim {
-    Birth(Birth),
-    Marriage(Marriage),
-    Death(Death),
-    Residence(Residence),
-    Burial(Burial),
-}
-
-impl Claim {
-    pub fn death() -> Self {
-        Self::Death(Death::default())
-    }
-
-    pub fn marriage(spouse: Persona) -> Self {
-        Self::Marriage(Marriage::new(spouse))
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn foo() {
-        let mary_holloway = Persona::new(Name::misus_first_last("Mary", "Holloway"));
-        let ransom_holloway = Persona::new(Name::first_last("Ransom", "Holloway"));
-        let artifact = Artifact::new();
-        let mut r#abstract = Abstract::new(artifact);
-
-        r#abstract.add_claim(
-            mary_holloway.clone(),
-            Claim::marriage(ransom_holloway.clone()),
-        );
-        r#abstract.add_claim(mary_holloway, Claim::death());
-        r#abstract.add_claim(ransom_holloway, Claim::death());
-    }
-}
+// #[derive(Debug, PartialEq)]
+// pub struct Source {
+//     pub r#abstract: Abstract,
+//     pub citation: Citation,
+//     pub artifact: Option<Artifact>
+// }
