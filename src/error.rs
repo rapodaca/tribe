@@ -26,3 +26,22 @@ impl From<yaml_rust::ScanError> for Error {
         todo!()
     }
 }
+
+impl From<serde_json::Error> for Error {
+    fn from(value: serde_json::Error) -> Self {
+        todo!()
+    }
+}
+
+impl From<handlebars::TemplateError> for Error {
+    fn from(value: handlebars::TemplateError) -> Self {
+        todo!()
+    }
+}
+
+impl From<serde_yaml::Error> for Error {
+    fn from(value: serde_yaml::Error) -> Self {
+        println!("error {:?}", value);
+        todo!()
+    }
+}

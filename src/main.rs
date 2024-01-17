@@ -1,13 +1,11 @@
-use std::fs;
+use std::{fs, path::PathBuf};
 
-use tribe::{date::Date, error::Error};
-use yaml_rust::YamlLoader;
-
-#[derive(Debug, PartialEq)]
-pub struct Source {
-    pub citation: Citation,
-    pub r#abstract: Abstract,
-}
+use handlebars::Handlebars;
+use serde_json::json;
+use tribe::{
+    error::Error,
+    source::{Abstract, Citation, Source},
+};
 
 #[derive(Debug, PartialEq)]
 pub enum Artifact {
@@ -19,54 +17,85 @@ pub enum Artifact {
     Excel(Vec<u8>),
 }
 
-#[derive(Debug, PartialEq)]
-pub struct Citation {
-    date: Option<Date>,
-    title: Option<String>,
-}
-
-#[derive(Debug, PartialEq)]
-pub struct Abstract {
-
-}
-
 fn read_citation(path: std::path::PathBuf) -> Result<Citation, Error> {
-    match fs::read_to_string(path) {
-        Ok(string) => {
-            let yaml = YamlLoader::load_from_str(&string)?;
-
-            Ok(Citation {
-                date: match &yaml[0]["date"].as_str() {
-                    Some(date) => Some(Date::new(date)?),
-                    None => None
-                },
-                title: yaml[0]["title"].as_str().map(|t| t.to_string())
-            })
-        },
+    match fs::read_to_string(path.clone()) {
+        Ok(string) => Ok(serde_yaml::from_str(&string)?),
         Err(error) => match error.kind() {
             std::io::ErrorKind::NotFound => Err(Error::NoCitation),
-            kind => Err(Error::Io(kind))
-        }
+            kind => Err(Error::Io(kind)),
+        },
     }
 }
 
 fn read_abstract(path: std::path::PathBuf) -> Result<Abstract, Error> {
     match fs::read_to_string(path) {
-        Ok(string) => {
-            // 1. parse string
-            let yaml = YamlLoader::load_from_str(&string)?;
-
-            Ok(Abstract {
-                // 2. pull fields from yaml
-            })
-        },
+        Ok(string) => Ok(serde_yaml::from_str(&string)?),
         Err(error) => match error.kind() {
-            std::io::ErrorKind::NotFound => {
-                return Ok(Abstract { })
-            },
-            kind => return Err(Error::Io(kind))
-        }
-    }   
+            std::io::ErrorKind::NotFound => return Ok(Abstract::new()),
+            kind => return Err(Error::Io(kind)),
+        },
+    }
+}
+
+pub fn register_templates(reg: &mut Handlebars) -> Result<(), Error> {
+    let mut path = PathBuf::new();
+
+    path.push("views");
+
+    path.push("partials");
+    path.push("wrapper.hbs");
+    reg.register_template_file("wrapper", &path)?;
+    path.pop();
+    path.push("footer.hbs");
+    reg.register_template_file("footer", &path)?;
+    path.pop();
+    path.pop();
+
+    path.push("layouts");
+    path.push("index.hbs");
+    reg.register_template_file("index", &path)?;
+    path.pop();
+
+    path.push("sources");
+    path.push("index.hbs");
+    reg.register_template_file("sources", &path)?;
+    path.pop();
+    path.push("source.hbs");
+    reg.register_template_file("source", &path)?;
+
+    Ok(())
+}
+
+pub fn build(sources: Vec<Source>) -> Result<(), Error> {
+    let mut handlebars = Handlebars::new();
+
+    register_templates(&mut handlebars)?;
+
+    let context = json!({"sources": sources});
+    let mut path = PathBuf::new();
+
+    path.push("build");
+    fs::create_dir(path.clone())?;
+    path.push("index.html");
+    fs::write(&path, handlebars.render("index", &context).unwrap())?;
+    path.pop();
+    path.push("sources");
+    fs::create_dir(&path)?;
+
+    for source in sources.iter() {
+        let source_context = serde_json::to_value(source)?;
+        path.push(&source.id);
+        fs::create_dir(&path)?;
+        path.push("index.html");
+        fs::write(&path, handlebars.render("source", &source_context).unwrap())?;
+        path.pop();
+        path.pop();
+    }
+
+    path.push("index.html");
+    fs::write(&path, handlebars.render("sources", &context).unwrap())?;
+
+    Ok(())
 }
 
 pub fn main() -> Result<(), Error> {
@@ -74,63 +103,16 @@ pub fn main() -> Result<(), Error> {
     let mut sources = Vec::new();
 
     for source_path in source_paths {
-        println!("source {:?}", source_path);
         let base_path = source_path?;
 
         if base_path.file_type()?.is_dir() {
-            let citation = read_citation(base_path.path().join("citation.yml"))?;
-            let r#abstract = read_abstract(base_path.path().join("abstract.yml"))?;
-
-            sources.push(Source { citation, r#abstract: r#abstract })
-            // Instead of iterating over all files, find the files:
-            // 1. citation.yml
-            // let citation_path = base_path.path().join("citation.yml");
-
-            // 2. abstract.yml
-            // 3. source.*
-            // for item_path in item_paths {
-            //     let item_path = item_path?.path();
-            //     let item_name = item_path
-            //         .file_name()
-            //         .and_then(OsStr::to_str)
-            //         .ok_or(Error::Filename)?;
-
-            // match item_name {
-            //     "citation.yml" => {
-
-            //         // let citation = read_citation(item_path)?;
-            //         // citation = Some(read_citation(item_path)?);
-            //         citation.replace(read_citation(item_path)?);
-            //     },
-            //     "abstract.yml" => {
-            //         // process abstract
-            //     },
-            //     _ => {
-            //         let extension = item_path
-            //             .extension()
-            //             .and_then(OsStr::to_str)
-            //             .ok_or(Error::Filename)?;
-
-            //         let artifact = match extension {
-            //             "png" => Artifact::Png(vec![]),
-            //             "jpg" => Artifact::Jpeg(vec![]),
-            //             "jpeg" => Artifact::Jpeg(vec![]),
-            //             "md" => Artifact::Markdown(String::new()),
-            //             "pdf" => Artifact::Pdf(vec![]),
-            //             "xls" => Artifact::Excel(vec![]),
-            //             "txt" => Artifact::Text(String::new()),
-            //             _ => return Err(Error::Extension(extension.to_string()))
-            //         };
-            //     }
-            // }
-
-            // }
-
-            // sources.push(Source {
-            //     citation: citation.ok_or(Error::NoCitation)?,
-            // });
+            sources.push(Source {
+                id: base_path.file_name().to_str().ok_or(Error::Filename)?.to_string(),
+                citation: read_citation(base_path.path().join("citation.yml"))?,
+                r#abstract: read_abstract(base_path.path().join("abstract.yml"))?,
+            });
         }
     }
 
-    Ok(())
+    build(sources)
 }

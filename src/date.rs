@@ -1,8 +1,9 @@
 use std::str::FromStr;
+use serde::{Serialize, Deserialize};
 
 use crate::error::Error;
 
-#[derive(Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Date(chrono::NaiveDate);
 
 impl Date {
